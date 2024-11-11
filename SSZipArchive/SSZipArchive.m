@@ -42,6 +42,7 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
 
 @interface SSZipArchive ()
 - (instancetype)init NS_DESIGNATED_INITIALIZER;
+@property (nonatomic, assign) BOOL isCanceled;
 @end
 
 @implementation SSZipArchive
@@ -232,19 +233,19 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
 
 #pragma mark - Unzipping
 
-+ (BOOL)unzipFileAtPath:(NSString *)path toDestination:(NSString *)destination
++ (BOOL)unzipFileAtPath:(NSString *)path toDestination:(NSString *)destination taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler
 {
-    return [self unzipFileAtPath:path toDestination:destination delegate:nil];
+    return [self unzipFileAtPath:path toDestination:destination delegate:nil taskHandler:taskHandler];
 }
 
-+ (BOOL)unzipFileAtPath:(NSString *)path toDestination:(NSString *)destination overwrite:(BOOL)overwrite password:(nullable NSString *)password error:(NSError **)error
++ (BOOL)unzipFileAtPath:(NSString *)path toDestination:(NSString *)destination overwrite:(BOOL)overwrite password:(nullable NSString *)password error:(NSError **)error taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler
 {
-    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:overwrite password:password error:error delegate:nil progressHandler:nil completionHandler:nil];
+    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:overwrite password:password error:error delegate:nil progressHandler:nil completionHandler:nil taskHandler:taskHandler];
 }
 
-+ (BOOL)unzipFileAtPath:(NSString *)path toDestination:(NSString *)destination delegate:(nullable id<SSZipArchiveDelegate>)delegate
++ (BOOL)unzipFileAtPath:(NSString *)path toDestination:(NSString *)destination delegate:(nullable id<SSZipArchiveDelegate>)delegate taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler
 {
-    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:YES password:nil error:nil delegate:delegate progressHandler:nil completionHandler:nil];
+    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:YES password:nil error:nil delegate:delegate progressHandler:nil completionHandler:nil taskHandler:taskHandler];
 }
 
 + (BOOL)unzipFileAtPath:(NSString *)path
@@ -253,8 +254,9 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
                password:(nullable NSString *)password
                   error:(NSError **)error
                delegate:(nullable id<SSZipArchiveDelegate>)delegate
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler
 {
-    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:overwrite password:password error:error delegate:delegate progressHandler:nil completionHandler:nil];
+    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:overwrite password:password error:error delegate:delegate progressHandler:nil completionHandler:nil taskHandler:taskHandler];
 }
 
 + (BOOL)unzipFileAtPath:(NSString *)path
@@ -263,16 +265,18 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
                password:(NSString *)password
         progressHandler:(void (^)(NSString *entry, unz_file_info zipInfo, long entryNumber, long total))progressHandler
       completionHandler:(void (^)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler
 {
-    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:overwrite password:password error:nil delegate:nil progressHandler:progressHandler completionHandler:completionHandler];
+    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:overwrite password:password error:nil delegate:nil progressHandler:progressHandler completionHandler:completionHandler taskHandler:taskHandler];
 }
 
 + (BOOL)unzipFileAtPath:(NSString *)path
           toDestination:(NSString *)destination
         progressHandler:(void (^_Nullable)(NSString *entry, unz_file_info zipInfo, long entryNumber, long total))progressHandler
       completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler
 {
-    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:YES password:nil error:nil delegate:nil progressHandler:progressHandler completionHandler:completionHandler];
+    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:YES password:nil error:nil delegate:nil progressHandler:progressHandler completionHandler:completionHandler taskHandler:taskHandler];
 }
 
 + (BOOL)unzipFileAtPath:(NSString *)path
@@ -282,8 +286,9 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
                password:(nullable NSString *)password
                   error:(NSError * *)error
                delegate:(nullable id<SSZipArchiveDelegate>)delegate
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler
 {
-    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:preserveAttributes overwrite:overwrite password:password error:error delegate:delegate progressHandler:nil completionHandler:nil];
+    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:preserveAttributes overwrite:overwrite password:password error:error delegate:delegate progressHandler:nil completionHandler:nil taskHandler:taskHandler];
 }
 
 + (BOOL)unzipFileAtPath:(NSString *)path
@@ -295,8 +300,9 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
                delegate:(nullable id<SSZipArchiveDelegate>)delegate
         progressHandler:(void (^_Nullable)(NSString *entry, unz_file_info zipInfo, long entryNumber, long total))progressHandler
       completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler
 {
-    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:preserveAttributes overwrite:overwrite nestedZipLevel:0 password:password error:error delegate:delegate progressHandler:progressHandler completionHandler:completionHandler];
+    return [self unzipFileAtPath:path toDestination:destination preserveAttributes:preserveAttributes overwrite:overwrite nestedZipLevel:0 password:password error:error delegate:delegate progressHandler:progressHandler completionHandler:completionHandler taskHandler:taskHandler];
 }
 
 + (BOOL)unzipFileAtPath:(NSString *)path
@@ -309,6 +315,7 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
                delegate:(nullable id<SSZipArchiveDelegate>)delegate
         progressHandler:(void (^_Nullable)(NSString *entry, unz_file_info zipInfo, long entryNumber, long total))progressHandler
       completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler
 {
     return [self unzipFileAtPath:path
                    toDestination:destination
@@ -320,9 +327,9 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
                            error:error
                         delegate:delegate
                  progressHandler:progressHandler
-               completionHandler:completionHandler];
+               completionHandler:completionHandler
+                     taskHandler:taskHandler];
 }
-
 
 + (BOOL)unzipFileAtPath:(NSString *)path
           toDestination:(NSString *)destination
@@ -335,7 +342,27 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
                delegate:(nullable id<SSZipArchiveDelegate>)delegate
         progressHandler:(void (^_Nullable)(NSString *entry, unz_file_info zipInfo, long entryNumber, long total))progressHandler
       completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler
 {
+    SSZipArchive * archive = [[SSZipArchive alloc] initWithPath: @""];
+    if (taskHandler != NULL && taskHandler != nil) {
+        taskHandler(archive);
+    }
+    
+    return [archive unzipFileAtPath:path toDestination:destination preserveAttributes:preserveAttributes overwrite:overwrite symlinksValidWithin:symlinksValidWithin nestedZipLevel:nestedZipLevel password:password error:error delegate:delegate progressHandler:progressHandler completionHandler:completionHandler];
+}
+
+- (BOOL)unzipFileAtPath:(NSString *)path
+          toDestination:(NSString *)destination
+     preserveAttributes:(BOOL)preserveAttributes
+              overwrite:(BOOL)overwrite
+    symlinksValidWithin:(nullable NSString *)symlinksValidWithin
+         nestedZipLevel:(NSInteger)nestedZipLevel
+               password:(nullable NSString *)password
+                  error:(NSError **)error
+               delegate:(nullable id<SSZipArchiveDelegate>)delegate
+        progressHandler:(void (^_Nullable)(NSString *entry, unz_file_info zipInfo, long entryNumber, long total))progressHandler
+      completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler {
     // Guard against empty strings
     if (path.length == 0 || destination.length == 0)
     {
@@ -445,7 +472,7 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
             currentPosition += fileInfo.compressed_size;
             
             // Message delegate
-            if ([delegate respondsToSelector:@selector(zipArchiveShouldUnzipFileAtIndex:totalFiles:archivePath:fileInfo:)]) {
+            if ([delegate respondsToSelector:@selector(zipArchiveShouldUnzipFileAtIndex:totalFiles:archivePath:fileInfo:)] || _isCanceled) {
                 if (![delegate zipArchiveShouldUnzipFileAtIndex:currentFileNumber
                                                      totalFiles:(NSInteger)globalInfo.number_entry
                                                     archivePath:path
@@ -454,7 +481,12 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
                     canceled = YES;
                     break;
                 }
+            } else if (_isCanceled) {
+                success = NO;
+                canceled = YES;
+                break;
             }
+            
             if ([delegate respondsToSelector:@selector(zipArchiveWillUnzipFileAtIndex:totalFiles:archivePath:fileInfo:)]) {
                 [delegate zipArchiveWillUnzipFileAtIndex:currentFileNumber totalFiles:(NSInteger)globalInfo.number_entry
                                              archivePath:path fileInfo:fileInfo];
@@ -804,25 +836,29 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
 }
 
 #pragma mark - Zipping
-+ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths
++ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler
 {
-    return [SSZipArchive createZipFileAtPath:path withFilesAtPaths:paths withPassword:nil];
+    return [SSZipArchive createZipFileAtPath:path withFilesAtPaths:paths withPassword:nil taskHandler:taskHandler];
 }
-+ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath {
-    return [SSZipArchive createZipFileAtPath:path withContentsOfDirectory:directoryPath withPassword:nil];
-}
-
-+ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath keepParentDirectory:(BOOL)keepParentDirectory {
-    return [SSZipArchive createZipFileAtPath:path withContentsOfDirectory:directoryPath keepParentDirectory:keepParentDirectory withPassword:nil];
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler {
+    return [SSZipArchive createZipFileAtPath:path withContentsOfDirectory:directoryPath withPassword:nil taskHandler:taskHandler];
 }
 
-+ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(NSString *)password {
-    return [self createZipFileAtPath:path withFilesAtPaths:paths withPassword:password progressHandler:nil];
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath keepParentDirectory:(BOOL)keepParentDirectory taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler {
+    return [SSZipArchive createZipFileAtPath:path withContentsOfDirectory:directoryPath keepParentDirectory:keepParentDirectory withPassword:nil taskHandler:taskHandler];
 }
 
-+ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(NSString *)password progressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler
++ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(NSString *)password taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler {
+    return [self createZipFileAtPath:path withFilesAtPaths:paths withPassword:password progressHandler:nil taskHandler:taskHandler];
+}
+
++ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(NSString *)password progressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler
 {
     SSZipArchive *zipArchive = [[SSZipArchive alloc] initWithPath:path];
+    if (taskHandler != NULL && taskHandler != nil) {
+        taskHandler(zipArchive);
+    }
+    
     BOOL success = [zipArchive open];
     if (success) {
         NSUInteger total = paths.count, complete = 0;
@@ -849,17 +885,18 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
     return success;
 }
 
-+ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withPassword:(nullable NSString *)password {
-    return [SSZipArchive createZipFileAtPath:path withContentsOfDirectory:directoryPath keepParentDirectory:NO withPassword:password];
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withPassword:(nullable NSString *)password taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler {
+    return [SSZipArchive createZipFileAtPath:path withContentsOfDirectory:directoryPath keepParentDirectory:NO withPassword:password taskHandler:taskHandler];
 }
 
 
-+ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath keepParentDirectory:(BOOL)keepParentDirectory withPassword:(nullable NSString *)password {
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath keepParentDirectory:(BOOL)keepParentDirectory withPassword:(nullable NSString *)password taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler {
     return [SSZipArchive createZipFileAtPath:path
                      withContentsOfDirectory:directoryPath
                          keepParentDirectory:keepParentDirectory
                                 withPassword:password
                           andProgressHandler:nil
+                                 taskHandler:taskHandler
             ];
 }
 
@@ -867,8 +904,9 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
     withContentsOfDirectory:(NSString *)directoryPath
         keepParentDirectory:(BOOL)keepParentDirectory
                withPassword:(nullable NSString *)password
-         andProgressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler {
-    return [self createZipFileAtPath:path withContentsOfDirectory:directoryPath keepParentDirectory:keepParentDirectory compressionLevel:Z_DEFAULT_COMPRESSION password:password AES:YES progressHandler:progressHandler];
+         andProgressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler
+                taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler {
+    return [self createZipFileAtPath:path withContentsOfDirectory:directoryPath keepParentDirectory:keepParentDirectory compressionLevel:Z_DEFAULT_COMPRESSION password:password AES:YES progressHandler:progressHandler taskHandler:taskHandler];
 }
 
 + (BOOL)createZipFileAtPath:(NSString *)path
@@ -877,9 +915,14 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
            compressionLevel:(int)compressionLevel
                    password:(nullable NSString *)password
                         AES:(BOOL)aes
-            progressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler {
+            progressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler
+                taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler {
     
     SSZipArchive *zipArchive = [[SSZipArchive alloc] initWithPath:path];
+    if (taskHandler != NULL && taskHandler != nil) {
+        taskHandler(zipArchive);
+    }
+    
     BOOL success = [zipArchive open];
     if (success) {
         // use a local fileManager (queue/thread compatibility)
@@ -931,11 +974,15 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
     return success;
 }
 
-+ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(nullable NSString *)password keepSymlinks:(BOOL)keeplinks {
++ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(nullable NSString *)password keepSymlinks:(BOOL)keeplinks taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler {
     if (!keeplinks) {
-        return [SSZipArchive createZipFileAtPath:path withFilesAtPaths:paths withPassword:password];
+        return [SSZipArchive createZipFileAtPath:path withFilesAtPaths:paths withPassword:password taskHandler:taskHandler];
     } else {
         SSZipArchive *zipArchive = [[SSZipArchive alloc] initWithPath:path];
+        if (taskHandler != NULL && taskHandler != nil) {
+            taskHandler(zipArchive);
+        }
+        
         BOOL success = [zipArchive open];
         if (success) {
             for (NSString *filePath in paths) {
@@ -959,7 +1006,8 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
                    password:(nullable NSString *)password
                         AES:(BOOL)aes
             progressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler
-               keepSymlinks:(BOOL)keeplinks {
+               keepSymlinks:(BOOL)keeplinks
+                taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler {
     if (!keeplinks) {
         return [SSZipArchive createZipFileAtPath:path
                          withContentsOfDirectory:directoryPath
@@ -967,9 +1015,13 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
                                 compressionLevel:compressionLevel
                                         password:password
                                              AES:aes
-                                 progressHandler:progressHandler];
+                                 progressHandler:progressHandler taskHandler:taskHandler];
     } else {
         SSZipArchive *zipArchive = [[SSZipArchive alloc] initWithPath:path];
+        if (taskHandler != NULL && taskHandler != nil) {
+            taskHandler(zipArchive);
+        }
+        
         BOOL success = [zipArchive open];
         if (success) {
             // use a local fileManager (queue/thread compatibility)
@@ -1067,6 +1119,7 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
 {
     if ((self = [super init])) {
         _path = [path copy];
+        _isCanceled = NO;
     }
     return self;
 }
@@ -1140,7 +1193,7 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
     
     int error = _zipOpenEntry(_zip, fileName, &zipInfo, compressionLevel, password, aes, 1);
     
-    while (!feof(input) && !ferror(input))
+    while (!feof(input) && !ferror(input) && !_isCanceled)
     {
         unsigned int len = (unsigned int) fread(buffer, 1, CHUNK, input);
         zipWriteInFileInZip(_zip, buffer, len);
@@ -1182,6 +1235,11 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
     int error = zipClose(_zip, NULL);
     _zip = nil;
     return error == ZIP_OK;
+}
+
+- (void)cancel
+{
+    self.isCanceled = YES;
 }
 
 #pragma mark - Private

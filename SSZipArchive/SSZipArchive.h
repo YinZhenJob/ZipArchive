@@ -37,21 +37,23 @@ typedef NS_ENUM(NSInteger, SSZipArchiveErrorCode) {
 + (NSNumber *)payloadSizeForArchiveAtPath:(NSString *)path error:(NSError **)error;
 
 // Unzip
-+ (BOOL)unzipFileAtPath:(NSString *)path toDestination:(NSString *)destination;
-+ (BOOL)unzipFileAtPath:(NSString *)path toDestination:(NSString *)destination delegate:(nullable id<SSZipArchiveDelegate>)delegate;
-
-+ (BOOL)unzipFileAtPath:(NSString *)path
-          toDestination:(NSString *)destination
-              overwrite:(BOOL)overwrite
-               password:(nullable NSString *)password
-                  error:(NSError * *)error;
++ (BOOL)unzipFileAtPath:(NSString *)path toDestination:(NSString *)destination taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler;
++ (BOOL)unzipFileAtPath:(NSString *)path toDestination:(NSString *)destination delegate:(nullable id<SSZipArchiveDelegate>)delegate taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler;
 
 + (BOOL)unzipFileAtPath:(NSString *)path
           toDestination:(NSString *)destination
               overwrite:(BOOL)overwrite
                password:(nullable NSString *)password
                   error:(NSError * *)error
-               delegate:(nullable id<SSZipArchiveDelegate>)delegate NS_REFINED_FOR_SWIFT;
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler;
+
++ (BOOL)unzipFileAtPath:(NSString *)path
+          toDestination:(NSString *)destination
+              overwrite:(BOOL)overwrite
+               password:(nullable NSString *)password
+                  error:(NSError * *)error
+               delegate:(nullable id<SSZipArchiveDelegate>)delegate
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler NS_REFINED_FOR_SWIFT;
 
 + (BOOL)unzipFileAtPath:(NSString *)path
           toDestination:(NSString *)destination
@@ -59,19 +61,22 @@ typedef NS_ENUM(NSInteger, SSZipArchiveErrorCode) {
               overwrite:(BOOL)overwrite
                password:(nullable NSString *)password
                   error:(NSError * *)error
-               delegate:(nullable id<SSZipArchiveDelegate>)delegate;
+               delegate:(nullable id<SSZipArchiveDelegate>)delegate
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler;
 
 + (BOOL)unzipFileAtPath:(NSString *)path
           toDestination:(NSString *)destination
         progressHandler:(void (^_Nullable)(NSString *entry, unz_file_info zipInfo, long entryNumber, long total))progressHandler
-      completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler;
+      completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler;
 
 + (BOOL)unzipFileAtPath:(NSString *)path
           toDestination:(NSString *)destination
               overwrite:(BOOL)overwrite
                password:(nullable NSString *)password
         progressHandler:(void (^_Nullable)(NSString *entry, unz_file_info zipInfo, long entryNumber, long total))progressHandler
-      completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler;
+      completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler;
 
 + (BOOL)unzipFileAtPath:(NSString *)path
           toDestination:(NSString *)destination
@@ -82,7 +87,8 @@ typedef NS_ENUM(NSInteger, SSZipArchiveErrorCode) {
                   error:(NSError **)error
                delegate:(nullable id<SSZipArchiveDelegate>)delegate
         progressHandler:(void (^_Nullable)(NSString *entry, unz_file_info zipInfo, long entryNumber, long total))progressHandler
-      completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler;
+      completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler;
 
 + (BOOL)unzipFileAtPath:(NSString *)path
           toDestination:(NSString *)destination
@@ -94,39 +100,42 @@ typedef NS_ENUM(NSInteger, SSZipArchiveErrorCode) {
                   error:(NSError **)error
                delegate:(nullable id<SSZipArchiveDelegate>)delegate
         progressHandler:(void (^_Nullable)(NSString *entry, unz_file_info zipInfo, long entryNumber, long total))progressHandler
-      completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler;
+      completionHandler:(void (^_Nullable)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
+            taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler;
 
 // Zip
 // default compression level is Z_DEFAULT_COMPRESSION (from "zlib.h")
 // keepParentDirectory: if YES, then unzipping will give `directoryName/fileName`. If NO, then unzipping will just give `fileName`. Default is NO.
 
 // without password
-+ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths;
-+ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath;
-+ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath keepParentDirectory:(BOOL)keepParentDirectory;
++ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler;
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler;
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath keepParentDirectory:(BOOL)keepParentDirectory taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler;
 
 // with optional password
 // - default is AES encryption
 // - don't use AES if you need compatibility with native macOS unzip and Archive Utility
 // - disabling AES will fallback to PKWARE traditional encryption
-+ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(nullable NSString *)password;
-+ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(nullable NSString *)password progressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler;
-+ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withPassword:(nullable NSString *)password;
-+ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath keepParentDirectory:(BOOL)keepParentDirectory withPassword:(nullable NSString *)password;
++ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(nullable NSString *)password taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler;
++ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(nullable NSString *)password progressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler;
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withPassword:(nullable NSString *)password taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler;
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath keepParentDirectory:(BOOL)keepParentDirectory withPassword:(nullable NSString *)password taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler;
 + (BOOL)createZipFileAtPath:(NSString *)path
     withContentsOfDirectory:(NSString *)directoryPath
         keepParentDirectory:(BOOL)keepParentDirectory
                withPassword:(nullable NSString *)password
-         andProgressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler;
+         andProgressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler
+                taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler;
 + (BOOL)createZipFileAtPath:(NSString *)path
     withContentsOfDirectory:(NSString *)directoryPath
         keepParentDirectory:(BOOL)keepParentDirectory
            compressionLevel:(int)compressionLevel
                    password:(nullable NSString *)password
                         AES:(BOOL)aes
-            progressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler;
+            progressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler
+                taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler;
 //suport symlink compress --file
-+ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(nullable NSString *)password keepSymlinks:(BOOL)keeplinks;
++ (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths withPassword:(nullable NSString *)password keepSymlinks:(BOOL)keeplinks taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler;
 //suport symlink compress --directory
 + (BOOL)createZipFileAtPath:(NSString *)path
     withContentsOfDirectory:(NSString *)directoryPath
@@ -135,7 +144,8 @@ typedef NS_ENUM(NSInteger, SSZipArchiveErrorCode) {
                    password:(nullable NSString *)password
                         AES:(BOOL)aes
             progressHandler:(void(^ _Nullable)(NSUInteger entryNumber, NSUInteger total))progressHandler
-               keepSymlinks:(BOOL)keeplinks;
+               keepSymlinks:(BOOL)keeplinks
+                taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler;
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithPath:(NSString *)path NS_DESIGNATED_INITIALIZER;
@@ -155,6 +165,8 @@ typedef NS_ENUM(NSInteger, SSZipArchiveErrorCode) {
 - (BOOL)writeData:(NSData *)data filename:(nullable NSString *)filename compressionLevel:(int)compressionLevel password:(nullable NSString *)password AES:(BOOL)aes;
 
 - (BOOL)close;
+
+- (void)cancel;
 
 @end
 
