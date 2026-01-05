@@ -835,6 +835,396 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
     return success;
 }
 
++ (nullable NSArray<NSString *> *)unzipFileNamesAtPath:(NSString *)path password:(nullable NSString *)password error:(NSError *__autoreleasing  _Nullable *)error {
+    if (path.length == 0) {
+        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: @"received invalid argument(s)"};
+        NSError *err = [NSError errorWithDomain:SSZipArchiveErrorDomain code:SSZipArchiveErrorCodeInvalidArguments userInfo:userInfo];
+        if (error)
+        {
+            *error = err;
+        }
+        return  nil;
+    }
+    
+    // Begin opening
+    zipFile zip = unzOpen(path.fileSystemRepresentation);
+    if (zip == NULL)
+    {
+        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: @"failed to open zip file"};
+        NSError *err = [NSError errorWithDomain:SSZipArchiveErrorDomain code:SSZipArchiveErrorCodeFailedOpenZipFile userInfo:userInfo];
+        if (error)
+        {
+            *error = err;
+        }
+        return  nil;
+    }
+    unsigned long long currentPosition = 0;
+    
+    unz_global_info globalInfo = {};
+    unzGetGlobalInfo(zip, &globalInfo);
+    
+    // Begin unzipping
+    int ret = 0;
+    ret = unzGoToFirstFile(zip);
+    if (ret != UNZ_OK && ret != MZ_END_OF_LIST)
+    {
+        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: @"failed to open first file in zip file"};
+        NSError *err = [NSError errorWithDomain:SSZipArchiveErrorDomain code:SSZipArchiveErrorCodeFailedOpenFileInZip userInfo:userInfo];
+        if (error)
+        {
+            *error = err;
+        }
+        unzClose(zip);
+        return nil;
+    }
+    
+    BOOL success = YES;
+    int crc_ret = 0;
+    
+    NSInteger currentFileNumber = -1;
+    NSError *unzippingError;
+    NSMutableArray<NSString *>* fileNames = [NSMutableArray array];
+    do {
+        currentFileNumber++;
+        if (ret == MZ_END_OF_LIST) {
+            break;
+        }
+        @autoreleasepool {
+            if (password.length == 0) {
+                ret = unzOpenCurrentFile(zip);
+            } else {
+                ret = unzOpenCurrentFilePassword(zip, [password cStringUsingEncoding:NSUTF8StringEncoding]);
+            }
+            
+            if (ret != UNZ_OK) {
+                unzippingError = [NSError errorWithDomain:@"SSZipArchiveErrorDomain" code:SSZipArchiveErrorCodeFailedOpenFileInZip userInfo:@{NSLocalizedDescriptionKey: @"failed to open file in zip file"}];
+                success = NO;
+                break;
+            }
+            
+            // Reading data and write to file
+            unz_file_info fileInfo;
+            memset(&fileInfo, 0, sizeof(unz_file_info));
+            
+            ret = unzGetCurrentFileInfo(zip, &fileInfo, NULL, 0, NULL, 0, NULL, 0);
+            if (ret != UNZ_OK) {
+                unzippingError = [NSError errorWithDomain:@"SSZipArchiveErrorDomain" code:SSZipArchiveErrorCodeFileInfoNotLoadable userInfo:@{NSLocalizedDescriptionKey: @"failed to retrieve info for file"}];
+                success = NO;
+                unzCloseCurrentFile(zip);
+                break;
+            }
+            
+            currentPosition += fileInfo.compressed_size;
+            
+            char *filename = (char *)malloc(fileInfo.size_filename + 1);
+            if (filename == NULL)
+            {
+                success = NO;
+                break;
+            }
+            
+            unzGetCurrentFileInfo(zip, &fileInfo, filename, fileInfo.size_filename + 1, NULL, 0, NULL, 0);
+            filename[fileInfo.size_filename] = '\0';
+            NSString * strPath = [SSZipArchive _filenameStringWithCString:filename
+                                                          version_made_by:fileInfo.version
+                                                     general_purpose_flag:fileInfo.flag
+                                                                     size:fileInfo.size_filename];
+            if ([strPath hasPrefix:@"__MACOSX/"]) {
+                // ignoring resource forks: https://superuser.com/questions/104500/what-is-macosx-folder
+                unzCloseCurrentFile(zip);
+                ret = unzGoToNextFile(zip);
+                free(filename);
+                continue;
+            }
+            
+            free(filename);
+            
+            // Sanitize paths in the file name.
+            strPath = [strPath _sanitizedPath];
+            if (!strPath.length) {
+                // if filename data is unsalvageable, we default to currentFileNumber
+                strPath = @(currentFileNumber).stringValue;
+            }
+            
+            [fileNames addObject: strPath];
+            
+            crc_ret = unzCloseCurrentFile(zip);
+            if (crc_ret == MZ_CRC_ERROR) {
+                // CRC ERROR
+                success = NO;
+                break;
+            }
+            ret = unzGoToNextFile(zip);
+            
+        }
+    } while (ret == UNZ_OK && success);
+    
+    // Close
+    unzClose(zip);
+    return fileNames;
+}
+
++ (nullable NSString *)unzipFileAtPath:(NSString *)path withFileName:(NSString *)fileName password:(NSString *)password error:(NSError *__autoreleasing  _Nullable *)error {
+    // Guard against empty strings
+    if (path.length == 0)
+    {
+        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: @"received invalid argument(s)"};
+        NSError *err = [NSError errorWithDomain:SSZipArchiveErrorDomain code:SSZipArchiveErrorCodeInvalidArguments userInfo:userInfo];
+        if (error)
+        {
+            *error = err;
+        }
+        return nil;
+    }
+    
+    // Begin opening
+    zipFile zip = unzOpen(path.fileSystemRepresentation);
+    if (zip == NULL)
+    {
+        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: @"failed to open zip file"};
+        NSError *err = [NSError errorWithDomain:SSZipArchiveErrorDomain code:SSZipArchiveErrorCodeFailedOpenZipFile userInfo:userInfo];
+        if (error)
+        {
+            *error = err;
+        }
+        return  nil;
+    }
+    
+    unsigned long long currentPosition = 0;
+    
+    unz_global_info globalInfo = {};
+    unzGetGlobalInfo(zip, &globalInfo);
+    
+    // Begin unzipping
+    int ret = 0;
+    ret = unzGoToFirstFile(zip);
+    if (ret != UNZ_OK && ret != MZ_END_OF_LIST)
+    {
+        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: @"failed to open first file in zip file"};
+        NSError *err = [NSError errorWithDomain:SSZipArchiveErrorDomain code:SSZipArchiveErrorCodeFailedOpenFileInZip userInfo:userInfo];
+        if (error)
+        {
+            *error = err;
+        }
+        unzClose(zip);
+        return nil;
+    }
+    
+    BOOL success = YES;
+    int crc_ret = 0;
+    unsigned char buffer[4096] = {0};
+    
+    NSInteger currentFileNumber = -1;
+    NSError *unzippingError;
+    do {
+        currentFileNumber++;
+        if (ret == MZ_END_OF_LIST) {
+            break;
+        }
+        @autoreleasepool {
+            if (password.length == 0) {
+                ret = unzOpenCurrentFile(zip);
+            } else {
+                ret = unzOpenCurrentFilePassword(zip, [password cStringUsingEncoding:NSUTF8StringEncoding]);
+            }
+            
+            if (ret != UNZ_OK) {
+                unzippingError = [NSError errorWithDomain:@"SSZipArchiveErrorDomain" code:SSZipArchiveErrorCodeFailedOpenFileInZip userInfo:@{NSLocalizedDescriptionKey: @"failed to open file in zip file"}];
+                success = NO;
+                break;
+            }
+            
+            // Reading data and write to file
+            unz_file_info fileInfo;
+            memset(&fileInfo, 0, sizeof(unz_file_info));
+            
+            ret = unzGetCurrentFileInfo(zip, &fileInfo, NULL, 0, NULL, 0, NULL, 0);
+            if (ret != UNZ_OK) {
+                unzippingError = [NSError errorWithDomain:@"SSZipArchiveErrorDomain" code:SSZipArchiveErrorCodeFileInfoNotLoadable userInfo:@{NSLocalizedDescriptionKey: @"failed to retrieve info for file"}];
+                success = NO;
+                unzCloseCurrentFile(zip);
+                break;
+            }
+            
+            currentPosition += fileInfo.compressed_size;
+            
+            char *filename = (char *)malloc(fileInfo.size_filename + 1);
+            if (filename == NULL)
+            {
+                success = NO;
+                break;
+            }
+            
+            unzGetCurrentFileInfo(zip, &fileInfo, filename, fileInfo.size_filename + 1, NULL, 0, NULL, 0);
+            filename[fileInfo.size_filename] = '\0';
+            
+            BOOL fileIsSymbolicLink = _fileIsSymbolicLink(&fileInfo);
+            
+            NSString * strPath = [SSZipArchive _filenameStringWithCString:filename
+                                                          version_made_by:fileInfo.version
+                                                     general_purpose_flag:fileInfo.flag
+                                                                     size:fileInfo.size_filename];
+            if ([strPath hasPrefix:@"__MACOSX/"]) {
+                // ignoring resource forks: https://superuser.com/questions/104500/what-is-macosx-folder
+                unzCloseCurrentFile(zip);
+                ret = unzGoToNextFile(zip);
+                free(filename);
+                continue;
+            }
+            
+            // Check if it contains directory
+            BOOL isDirectory = filenameIsDirectory(filename, fileInfo.size_filename);
+            free(filename);
+            
+            // Sanitize paths in the file name.
+            strPath = [strPath _sanitizedPath];
+            if (!strPath.length) {
+                // if filename data is unsalvageable, we default to currentFileNumber
+                strPath = @(currentFileNumber).stringValue;
+            }
+            
+            NSString *tmpPath = NSTemporaryDirectory();
+            NSString *fullPath = [tmpPath stringByAppendingPathComponent:strPath];
+            
+            // 判断是否为相同文件
+            BOOL isSameFile = [[fullPath stringByDeletingLastPathComponent] isEqualToString: fileName];
+            if (!isSameFile) {
+                crc_ret = unzCloseCurrentFile(zip);
+                if (crc_ret == MZ_CRC_ERROR) {
+                    // CRC ERROR
+                    success = NO;
+                    break;
+                }
+                ret = unzGoToNextFile(zip);
+                continue;
+            }
+            
+            if (isDirectory && !fileIsSymbolicLink) {
+                // nothing to read/write for a directory
+            } else if (!fileIsSymbolicLink) {
+                // ensure we are not creating stale file entries
+                int readBytes = unzReadCurrentFile(zip, buffer, 4096);
+                if (readBytes >= 0) {
+                    FILE *fp = fopen(fullPath.fileSystemRepresentation, "wb");
+                    while (fp) {
+                        if (readBytes > 0) {
+                            if (0 == fwrite(buffer, readBytes, 1, fp)) {
+                                if (ferror(fp)) {
+                                    NSString *message = [NSString stringWithFormat:@"Failed to write file (check your free space)"];
+                                    NSLog(@"[SSZipArchive] %@", message);
+                                    success = NO;
+                                    unzippingError = [NSError errorWithDomain:@"SSZipArchiveErrorDomain" code:SSZipArchiveErrorCodeFailedToWriteFile userInfo:@{NSLocalizedDescriptionKey: message}];
+                                    break;
+                                }
+                            }
+                        } else {
+                            break;
+                        }
+                        readBytes = unzReadCurrentFile(zip, buffer, 4096);
+                        if (readBytes < 0) {
+                            // Let's assume error Z_DATA_ERROR is caused by an invalid password
+                            // Let's assume other errors are caused by Content Not Readable
+                            success = NO;
+                        }
+                    }
+                    
+                    if (fp) {
+                        fclose(fp);
+                    }
+                    else
+                    {
+                        // if we couldn't open file descriptor we can validate global errno to see the reason
+                        int errnoSave = errno;
+                        BOOL isSeriousError = NO;
+                        switch (errnoSave) {
+                            case EISDIR:
+                                // Is a directory
+                                // assumed case
+                                break;
+                                
+                            case ENOSPC:
+                            case EMFILE:
+                                // No space left on device
+                                //  or
+                                // Too many open files
+                                isSeriousError = YES;
+                                break;
+                                
+                            default:
+                                // ignore case
+                                // Just log the error
+                            {
+                                NSError *errorObject = [NSError errorWithDomain:NSPOSIXErrorDomain
+                                                                           code:errnoSave
+                                                                       userInfo:nil];
+                                NSLog(@"[SSZipArchive] Failed to open file on unzipping.(%@)", errorObject);
+                            }
+                                break;
+                        }
+                        
+                        if (isSeriousError) {
+                            // serious case
+                            unzippingError = [NSError errorWithDomain:NSPOSIXErrorDomain
+                                                                 code:errnoSave
+                                                             userInfo:nil];
+                            unzCloseCurrentFile(zip);
+                            // Log the error
+                            NSLog(@"[SSZipArchive] Failed to open file on unzipping.(%@)", unzippingError);
+
+                            // Break unzipping
+                            success = NO;
+                            break;
+                        }
+                    }
+                } else {
+                    // Let's assume error Z_DATA_ERROR is caused by an invalid password
+                    // Let's assume other errors are caused by Content Not Readable
+                    success = NO;
+                    break;
+                }
+                return fullPath;
+            }
+            else
+            {
+                // Assemble the path for the symbolic link
+                NSMutableString *destinationPath = [NSMutableString string];
+                int bytesRead = 0;
+                while ((bytesRead = unzReadCurrentFile(zip, buffer, 4096)) > 0)
+                {
+                    buffer[bytesRead] = 0;
+                    [destinationPath appendString:@((const char *)buffer)];
+                }
+                if (bytesRead < 0) {
+                    // Let's assume error Z_DATA_ERROR is caused by an invalid password
+                    // Let's assume other errors are caused by Content Not Readable
+                    success = NO;
+                    break;
+                }
+                
+                // compose symlink full path
+                NSString *symlinkFullDestinationPath = destinationPath;
+                if (![symlinkFullDestinationPath isAbsolutePath]) {
+                    symlinkFullDestinationPath = [[fullPath stringByDeletingLastPathComponent] stringByAppendingPathComponent:destinationPath];
+                }
+            }
+            
+            crc_ret = unzCloseCurrentFile(zip);
+            if (crc_ret == MZ_CRC_ERROR) {
+                // CRC ERROR
+                success = NO;
+                break;
+            }
+            ret = unzGoToNextFile(zip);
+            
+        }
+    } while (ret == UNZ_OK && success);
+    
+    // Close
+    unzClose(zip);
+    return nil;
+}
+
+
 #pragma mark - Zipping
 + (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler
 {

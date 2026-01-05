@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = 'SSZipArchive'
-  s.version      = '1.0.0'
+  s.version      = '1.1.0'
   s.summary      = 'Utility class for zipping and unzipping files on iOS, tvOS, visionOS, watchOS, and macOS. Add cancel action.'
   s.description  = 'SSZipArchive is a simple utility class for zipping and unzipping files on iOS, tvOS, visionOS, watchOS, and macOS. It supports AES and PKWARE encryption.'
   s.homepage     = 'https://github.com/YinZhenJob/ZipArchive'
