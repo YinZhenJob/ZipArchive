@@ -1087,7 +1087,7 @@ static bool filenameIsDirectory(const char *filename, uint16_t size)
             NSString *fullPath = [tmpPath stringByAppendingPathComponent:strPath];
             
             // 判断是否为相同文件
-            BOOL isSameFile = [[fullPath stringByDeletingLastPathComponent] isEqualToString: fileName];
+            BOOL isSameFile = [[fullPath lastPathComponent] isEqualToString: fileName];
             if (!isSameFile) {
                 crc_ret = unzCloseCurrentFile(zip);
                 if (crc_ret == MZ_CRC_ERROR) {
