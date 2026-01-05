@@ -1103,7 +1103,7 @@ BOOL _fileIsSymbolicLink(const unz_file_info *fileInfo);
             }
             
             // Check if it contains directory
-            BOOL isDirectory = filenameIsDirectory(filename, fileInfo.size_filename);
+            BOOL isDirectory = [strPath _isDirectory];
             free(filename);
             
             // Sanitize paths in the file name.
