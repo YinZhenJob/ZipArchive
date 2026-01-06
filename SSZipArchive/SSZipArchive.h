@@ -104,18 +104,20 @@ typedef NS_ENUM(NSInteger, SSZipArchiveErrorCode) {
             taskHandler:(void (^ _Nullable)(SSZipArchive * _Nonnull))taskHandler;
 
 /// 获取压缩包文件列表
-/// - Parameter path: 压缩包路径
-/// - Parameter password: 解压码
-/// - Parameter error: 错误提示
-+ (nullable NSArray<NSString *> *)unzipFileNamesAtPath:(NSString *)path password:(nullable NSString *)password error:(NSError **)error;
-
-/// 解压指定文件
 /// - Parameters:
 ///   - path: 压缩包路径
-///   - fileName: 指定文件
 ///   - password: 解压码
 ///   - error: 错误提示
-+ (nullable NSString *)unzipFileAtPath:(NSString *)path withFileName:(NSString *)fileName password:(nullable NSString*)password error:(NSError **)error;
++ (nullable NSArray<NSString *> *)unzipFileNamesAtPath:(NSString *)path password:(nullable NSString *)password error:(NSError **)error;
+
+/// 从压缩包里解压指定文件到某一路径
+/// - Parameters:
+///   - path: 压缩包路径
+///   - fileName: 文件名
+///   - toPath: 解压路径
+///   - password: 解压码
+///   - error: 错误提示
++ (void)unzipFileAtPath:(NSString *)path withFileName:(NSString *)fileName toPath:(NSString *)toPath password:(nullable NSString*)password error:(NSError **)error;
 
 // Zip
 // default compression level is Z_DEFAULT_COMPRESSION (from "zlib.h")

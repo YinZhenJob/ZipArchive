@@ -994,7 +994,7 @@ BOOL _fileIsSymbolicLink(const unz_file_info *fileInfo);
     return fileNames;
 }
 
-+ (nullable NSString *)unzipFileAtPath:(NSString *)path withFileName:(NSString *)fileName password:(NSString *)password error:(NSError *__autoreleasing  _Nullable *)error {
++ (void)unzipFileAtPath:(NSString *)path withFileName:(NSString *)fileName toPath:(NSString *)toPath password:(NSString *)password error:(NSError *__autoreleasing  _Nullable *)error {
     // Guard against empty strings
     if (path.length == 0)
     {
@@ -1004,7 +1004,7 @@ BOOL _fileIsSymbolicLink(const unz_file_info *fileInfo);
         {
             *error = err;
         }
-        return nil;
+        return;
     }
     
     // Begin opening
@@ -1017,7 +1017,7 @@ BOOL _fileIsSymbolicLink(const unz_file_info *fileInfo);
         {
             *error = err;
         }
-        return  nil;
+        return;
     }
     
     unsigned long long currentPosition = 0;
@@ -1037,7 +1037,7 @@ BOOL _fileIsSymbolicLink(const unz_file_info *fileInfo);
             *error = err;
         }
         unzClose(zip);
-        return nil;
+        return;
     }
     
     BOOL success = YES;
@@ -1113,8 +1113,7 @@ BOOL _fileIsSymbolicLink(const unz_file_info *fileInfo);
                 strPath = @(currentFileNumber).stringValue;
             }
             
-            NSString *tmpPath = NSTemporaryDirectory();
-            NSString *fullPath = [tmpPath stringByAppendingPathComponent:strPath];
+            NSString *fullPath = toPath;
             
             // 判断是否为相同文件
             BOOL isSameFile = [[fullPath lastPathComponent] isEqualToString: fileName];
@@ -1215,7 +1214,7 @@ BOOL _fileIsSymbolicLink(const unz_file_info *fileInfo);
                 
                 // Close
                 unzClose(zip);
-                return fullPath;
+                return;
             }
             else
             {
@@ -1254,9 +1253,8 @@ BOOL _fileIsSymbolicLink(const unz_file_info *fileInfo);
     
     // Close
     unzClose(zip);
-    return nil;
+    return;
 }
-
 
 #pragma mark - Zipping
 + (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray<NSString *> *)paths taskHandler:(void(^ _Nullable)(SSZipArchive *))taskHandler
