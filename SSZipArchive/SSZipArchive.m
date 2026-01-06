@@ -1158,7 +1158,7 @@ BOOL _fileIsSymbolicLink(const unz_file_info *fileInfo);
                         }
                     }
                     
-                    if (fp) {
+                    if (fp || isSameFile) {
                         fclose(fp);
                     }
                     else
