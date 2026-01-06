@@ -1116,7 +1116,7 @@ BOOL _fileIsSymbolicLink(const unz_file_info *fileInfo);
             NSString *fullPath = toPath;
             
             // 判断是否为相同文件
-            BOOL isSameFile = [[fullPath lastPathComponent] isEqualToString: fileName];
+            BOOL isSameFile = [[strPath lastPathComponent] isEqualToString: fileName];
             if (!isSameFile) {
                 crc_ret = unzCloseCurrentFile(zip);
                 if (crc_ret == MZ_CRC_ERROR) {
