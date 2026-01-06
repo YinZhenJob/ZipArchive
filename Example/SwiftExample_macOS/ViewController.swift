@@ -6,12 +6,7 @@
 //
 
 import Cocoa
-
-#if UseCarthage
-    import ZipArchive
-#else
-    import SSZipArchive
-#endif
+import ZipArchive
 
 class ViewController: NSViewController {
 
@@ -69,6 +64,28 @@ class ViewController: NSViewController {
             info.stringValue = "No success zip"
         }
         resetButton.isEnabled = true
+    }
+    
+    var password: String? {
+        passwordField.stringValue
+    }
+    
+    @IBAction func unzipFileList(_: NSButton) {
+        do {
+            let list = try SSZipArchive.unzipFileNames(atPath: zipPath!, password: password)
+            print("\(#function) result: \(list)")
+        } catch {
+            print("\(#function) error: \(error)")
+        }
+    }
+    
+    @IBAction func unzipOneFile(_: NSButton) {
+        do {
+            let result = try SSZipArchive.unzipFile(atPath: zipPath!, withFileName: "2.md", password: password)
+            print("\(#function) result: \(result)")
+        } catch {
+            print("\(#function) error: \(error)")
+        }
     }
     
     @IBAction func unzipPressed(_: NSButton) {

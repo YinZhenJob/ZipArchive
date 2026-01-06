@@ -1212,6 +1212,9 @@ BOOL _fileIsSymbolicLink(const unz_file_info *fileInfo);
                     success = NO;
                     break;
                 }
+                
+                // Close
+                unzClose(zip);
                 return fullPath;
             }
             else
